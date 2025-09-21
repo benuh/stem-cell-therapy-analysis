@@ -1,0 +1,16 @@
+trial_id,condition,intervention,n_patients,treatment_group,control_group,primary_endpoint,endpoint_value,baseline_value,percent_change,p_value,ci_lower,ci_upper,follow_up_months,phase,status,safety_events,country
+NCT05135091,Epilepsy,NRTX-1001_low_dose,5,5,0,seizure_reduction_percent,92.0,100.0,-92.0,NA,NA,NA,12,Phase_1_2,Ongoing,0,USA
+NCT05135091_longterm,Epilepsy,NRTX-1001_low_dose,5,5,0,seizure_reduction_percent,97.0,100.0,-97.0,NA,NA,NA,18,Phase_1_2,Ongoing,0,USA
+NCT06422923,Epilepsy,NRTX-1001_high_dose,8,8,0,seizure_reduction_percent,78.0,100.0,-78.0,NA,NA,NA,6,Phase_1_2,Ongoing,0,USA
+NCT02497443,Epilepsy,MSC_autologous,67,34,33,response_rate_percent,61.7,0.0,61.7,0.01,NA,NA,6,Phase_1_2,Completed,0,Multiple
+NCT02497443_12m,Epilepsy,MSC_autologous,67,34,33,response_rate_percent,76.5,0.0,76.5,0.001,NA,NA,12,Phase_1_2,Completed,0,Multiple
+NCT04786262,Type_1_Diabetes,VX-880_full_dose,12,12,0,insulin_independence_rate,83.3,0.0,83.3,NA,NA,NA,12,Phase_1_2_3,Ongoing,2,USA
+NCT04786262_hba1c,Type_1_Diabetes,VX-880,14,14,0,hba1c_percent,5.65,8.1,-30.2,NA,NA,NA,12,Phase_1_2_3,Ongoing,2,USA
+META_DIABETES_T1DM,Type_1_Diabetes,Various_MSC,199,199,0,hba1c_change_absolute,-3.46,NA,NA,0.003,-6.01,-0.91,12,Meta_Analysis,Completed,NA,Multiple
+META_DIABETES_T2DM,Type_2_Diabetes,Various_MSC,308,308,0,hba1c_change_absolute,-0.87,NA,NA,0.003,-1.37,-0.37,12,Meta_Analysis,Completed,NA,Multiple
+META_INSULIN_REDUCTION,Type_1_Diabetes,Various_MSC,507,507,0,insulin_reduction,0.19,NA,NA,0.002,0.07,0.31,12,Meta_Analysis,Completed,NA,Multiple
+META_C_PEPTIDE_T1DM,Type_1_Diabetes,Various_MSC,199,199,0,c_peptide_change,0.41,NA,NA,0.05,0.06,0.76,12,Meta_Analysis,Completed,NA,Multiple
+META_C_PEPTIDE_T2DM,Type_2_Diabetes,Various_MSC,308,308,0,c_peptide_change,0.33,NA,NA,0.02,0.07,0.59,12,Meta_Analysis,Completed,NA,Multiple
+CD34_HSC_DIABETES,Type_1_Diabetes,CD34_HSCs,89,89,0,insulin_independence_rate,58.9,0.0,58.9,NA,NA,NA,16,Various,Completed,NA,Multiple
+BM_MNC_DIABETES,Type_1_Diabetes,BM_MNCs,107,107,0,insulin_independence_rate,16.8,0.0,16.8,NA,NA,NA,18,Various,Completed,NA,Multiple
+MSC_DIABETES_SMALL,Type_1_Diabetes,MSCs,15,15,0,insulin_independence_rate,20.0,0.0,20.0,NA,NA,NA,21,Various,Completed,NA,Multiple
