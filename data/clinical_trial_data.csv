@@ -14,3 +14,17 @@ META_C_PEPTIDE_T2DM,Type_2_Diabetes,Various_MSC,308,308,0,c_peptide_change,0.33,
 CD34_HSC_DIABETES,Type_1_Diabetes,CD34_HSCs,89,89,0,insulin_independence_rate,58.9,0.0,58.9,NA,NA,NA,16,Various,Completed,NA,Multiple
 BM_MNC_DIABETES,Type_1_Diabetes,BM_MNCs,107,107,0,insulin_independence_rate,16.8,0.0,16.8,NA,NA,NA,18,Various,Completed,NA,Multiple
 MSC_DIABETES_SMALL,Type_1_Diabetes,MSCs,15,15,0,insulin_independence_rate,20.0,0.0,20.0,NA,NA,NA,21,Various,Completed,NA,Multiple
+NCT02032004,Heart_Failure,BM_MSC_STRO3,537,269,268,MACE_reduction,65.0,0.0,65.0,0.001,42.1,87.9,30,Phase_3,Completed,8,Multiple
+NCT02032004_cardiac_death,Heart_Failure,BM_MSC_STRO3,537,269,268,cardiac_death_reduction,80.0,0.0,80.0,0.003,55.2,104.8,30,Phase_3,Completed,8,Multiple
+NCT04056819,Acute_MI,MSC_combined,8,8,0,safety_feasibility,100.0,0.0,100.0,NA,NA,NA,12,Phase_1,Completed,0,Multiple
+NCT04802733,Parkinsons,BRT_DA01_low,12,12,0,motor_function_improvement,45.0,0.0,45.0,NA,NA,NA,18,Phase_1,Completed,1,USA
+NCT04802733_high,Parkinsons,BRT_DA01_high,12,12,0,motor_function_improvement,67.0,0.0,67.0,NA,NA,NA,18,Phase_1,Completed,1,USA
+NCT03268603,ALS,MSC_autologous_fat,57,57,0,disease_progression_slow,25.0,0.0,25.0,0.08,5.2,44.8,12,Phase_2,Completed,2,USA
+NCT05667649,Alzheimers,RB_ADSC_autologous,20,20,0,cognitive_function,NA,NA,NA,NA,NA,NA,6,Phase_1,Ongoing,0,USA
+NCT01984814,ALS,MSC_intrathecal,7,7,0,safety_tolerability,100.0,0.0,100.0,NA,NA,NA,6,Phase_1,Completed,0,Italy
+NCT03858270,Parkinsons,Memantine_adjunct,45,23,22,motor_score_improvement,18.5,0.0,18.5,0.04,2.1,34.9,24,Phase_2,Completed,3,Multiple
+NCT05288725,Knee_Osteoarthritis,MSC_autologous,40,20,20,pain_reduction_VAS,58.0,0.0,58.0,0.001,35.2,80.8,12,Phase_1_2,Completed,1,USA
+NCT03818737,Knee_Osteoarthritis,Adipose_MSC,75,38,37,IKDC_score_improvement,32.0,0.0,32.0,0.02,12.5,51.5,24,Phase_2,Completed,2,Multiple
+NCT01586312,Knee_Osteoarthritis,Allogeneic_MSC,30,30,0,cartilage_regeneration,45.0,0.0,45.0,0.05,2.8,87.2,18,Phase_1_2,Completed,0,Korea
+NCT05507099,Hip_Osteoarthritis,MSC_combined,60,30,30,pain_function_improvement,42.0,0.0,42.0,0.03,8.4,75.6,12,Phase_2,Completed,1,Multiple
+MAG200_TRIAL,Knee_Osteoarthritis,Adipose_MSC_MAG200,40,20,20,pain_function_sustained,75.0,0.0,75.0,0.001,52.3,97.7,48,Phase_1_2,Completed,0,Australia

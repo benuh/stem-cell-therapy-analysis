@@ -137,6 +137,35 @@ class TreatmentOutcomePredictor:
 
         return X_eng
 
+    def _initialize_ensemble_models(self) -> None:
+        """Initialize ensemble models"""
+        # Base estimators for ensemble
+        base_models = [
+            ('rf', RandomForestRegressor(n_estimators=50, random_state=42)),
+            ('gb', GradientBoostingRegressor(n_estimators=50, random_state=42)),
+            ('xgb', xgb.XGBRegressor(n_estimators=50, random_state=42)),
+            ('svr', SVR(kernel='rbf')),
+            ('ridge', Ridge(alpha=1.0))
+        ]
+
+        self.ensemble_models = {
+            # Voting Ensemble
+            'voting_regressor': VotingRegressor(estimators=base_models),
+
+            # Bagging Ensemble
+            'bagging': BaggingRegressor(
+                base_estimator=DecisionTreeRegressor(random_state=42),
+                n_estimators=50, random_state=42
+            ),
+
+            # Stacking Ensemble
+            'stacking': StackingRegressor(
+                estimators=base_models,
+                final_estimator=Ridge(alpha=1.0),
+                cv=5
+            )
+        }
+
     def feature_selection(self, X: np.ndarray, y: np.ndarray,
                          feature_names: List[str], method: str = 'all') -> Tuple[np.ndarray, List[str]]:
         """
@@ -538,6 +567,126 @@ class TreatmentOutcomePredictor:
         return (None, None)
 
 
+class GeneticAlgorithmOptimizer:
+    """
+    Genetic Algorithm for treatment protocol optimization
+    """
+
+    def __init__(self, predictor: TreatmentOutcomePredictor, population_size: int = 50,
+                 generations: int = 100, mutation_rate: float = 0.1):
+        self.predictor = predictor
+        self.population_size = population_size
+        self.generations = generations
+        self.mutation_rate = mutation_rate
+
+        # Initialize DEAP framework
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("Individual", list, fitness=creator.FitnessMax)
+
+        self.toolbox = base.Toolbox()
+
+    def setup_ga(self, variable_params: List[str], param_ranges: Dict[str, Tuple[float, float]]):
+        """Setup genetic algorithm components"""
+
+        def create_individual():
+            individual = []
+            for param in variable_params:
+                low, high = param_ranges[param]
+                individual.append(random.uniform(low, high))
+            return creator.Individual(individual)
+
+        def evaluate_individual(individual):
+            # Create patient profile with GA parameters
+            patient_profile = {}
+            for i, param in enumerate(variable_params):
+                patient_profile[param] = individual[i]
+
+            # Predict outcome
+            prediction_result = self.predictor.predict_treatment_outcome(patient_profile)
+
+            if 'error' in prediction_result:
+                return (0.0,)  # Poor fitness for invalid parameters
+
+            return (prediction_result['predicted_outcome'],)
+
+        def mutate_individual(individual):
+            for i in range(len(individual)):
+                if random.random() < self.mutation_rate:
+                    param = variable_params[i]
+                    low, high = param_ranges[param]
+                    individual[i] = random.uniform(low, high)
+            return individual,
+
+        # Register functions
+        self.toolbox.register("individual", create_individual)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+        self.toolbox.register("evaluate", evaluate_individual)
+        self.toolbox.register("mate", tools.cxBlend, alpha=0.5)
+        self.toolbox.register("mutate", mutate_individual)
+        self.toolbox.register("select", tools.selTournament, tournsize=3)
+
+    def optimize(self, variable_params: List[str], param_ranges: Dict[str, Tuple[float, float]]) -> Dict:
+        """Run genetic algorithm optimization"""
+        self.setup_ga(variable_params, param_ranges)
+
+        # Create initial population
+        population = self.toolbox.population(n=self.population_size)
+
+        # Evaluate initial population
+        fitnesses = list(map(self.toolbox.evaluate, population))
+        for ind, fit in zip(population, fitnesses):
+            ind.fitness.values = fit
+
+        # Evolution
+        best_fitness_history = []
+
+        for gen in range(self.generations):
+            # Select next generation
+            offspring = self.toolbox.select(population, len(population))
+            offspring = list(map(self.toolbox.clone, offspring))
+
+            # Apply crossover and mutation
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() < 0.7:  # Crossover probability
+                    self.toolbox.mate(child1, child2)
+                    del child1.fitness.values
+                    del child2.fitness.values
+
+            for mutant in offspring:
+                if random.random() < self.mutation_rate:
+                    self.toolbox.mutate(mutant)
+                    del mutant.fitness.values
+
+            # Evaluate offspring
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = map(self.toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # Replace population
+            population[:] = offspring
+
+            # Track best fitness
+            fits = [ind.fitness.values[0] for ind in population]
+            best_fitness_history.append(max(fits))
+
+        # Get best individual
+        best_ind = tools.selBest(population, 1)[0]
+
+        # Create optimized profile
+        optimized_profile = {}
+        for i, param in enumerate(variable_params):
+            optimized_profile[param] = best_ind[i]
+
+        return {
+            'success': True,
+            'optimized_parameters': optimized_profile,
+            'best_fitness': best_ind.fitness.values[0],
+            'fitness_history': best_fitness_history,
+            'generations': self.generations
+        }
+
+
 class TreatmentOptimizer:
     """
     Optimize treatment protocols using predictive models
@@ -546,6 +695,7 @@ class TreatmentOptimizer:
     def __init__(self, predictor: TreatmentOutcomePredictor):
         self.predictor = predictor
         self.optimization_results = {}
+        self.ga_optimizer = GeneticAlgorithmOptimizer(predictor)
 
     def optimize_treatment_protocol(self, base_patient: Dict,
                                   variable_params: List[str],
@@ -627,6 +777,200 @@ class TreatmentOptimizer:
         except Exception as e:
             return {'error': f'Optimization failed: {str(e)}'}
 
+    def genetic_algorithm_optimization(self, base_patient: Dict,
+                                     variable_params: List[str],
+                                     param_ranges: Dict[str, Tuple[float, float]]) -> Dict[str, Any]:
+        """
+        Optimize treatment parameters using genetic algorithm
+        """
+        if not self.predictor.trained_models:
+            return {'error': 'No trained models available for optimization'}
+
+        try:
+            # Run genetic algorithm optimization
+            ga_result = self.ga_optimizer.optimize(variable_params, param_ranges)
+
+            if ga_result['success']:
+                # Create optimized patient profile
+                optimized_profile = base_patient.copy()
+                optimized_profile.update(ga_result['optimized_parameters'])
+
+                # Get predictions
+                optimized_prediction = self.predictor.predict_treatment_outcome(optimized_profile)
+                baseline_prediction = self.predictor.predict_treatment_outcome(base_patient)
+
+                result = {
+                    'success': True,
+                    'method': 'genetic_algorithm',
+                    'optimized_parameters': ga_result['optimized_parameters'],
+                    'optimized_profile': optimized_profile,
+                    'optimized_outcome': optimized_prediction.get('predicted_outcome'),
+                    'baseline_outcome': baseline_prediction.get('predicted_outcome'),
+                    'improvement': (optimized_prediction.get('predicted_outcome', 0) -
+                                  baseline_prediction.get('predicted_outcome', 0)),
+                    'best_fitness': ga_result['best_fitness'],
+                    'fitness_history': ga_result['fitness_history'],
+                    'generations': ga_result['generations']
+                }
+
+                return result
+
+        except Exception as e:
+            return {'error': f'Genetic algorithm optimization failed: {str(e)}'}
+
+    def differential_evolution_optimization(self, base_patient: Dict,
+                                          variable_params: List[str],
+                                          param_ranges: Dict[str, Tuple[float, float]]) -> Dict[str, Any]:
+        """
+        Optimize treatment parameters using differential evolution
+        """
+        if not self.predictor.trained_models:
+            return {'error': 'No trained models available for optimization'}
+
+        def objective_function(params):
+            # Create patient profile with optimized parameters
+            patient_profile = base_patient.copy()
+
+            for i, param_name in enumerate(variable_params):
+                patient_profile[param_name] = params[i]
+
+            # Predict outcome
+            prediction_result = self.predictor.predict_treatment_outcome(patient_profile)
+
+            if 'error' in prediction_result:
+                return float('inf')
+
+            predicted_outcome = prediction_result['predicted_outcome']
+            return -predicted_outcome  # Minimize negative for maximization
+
+        # Set up optimization bounds
+        bounds = [param_ranges[param] for param in variable_params]
+
+        try:
+            # Perform differential evolution
+            result = differential_evolution(
+                objective_function,
+                bounds,
+                maxiter=100,
+                popsize=15,
+                atol=1e-6,
+                seed=42
+            )
+
+            # Create optimized patient profile
+            optimized_profile = base_patient.copy()
+            for i, param_name in enumerate(variable_params):
+                optimized_profile[param_name] = result.x[i]
+
+            # Get predictions
+            optimized_prediction = self.predictor.predict_treatment_outcome(optimized_profile)
+            baseline_prediction = self.predictor.predict_treatment_outcome(base_patient)
+
+            optimization_results = {
+                'success': result.success,
+                'method': 'differential_evolution',
+                'optimized_parameters': dict(zip(variable_params, result.x)),
+                'optimized_profile': optimized_profile,
+                'optimized_outcome': optimized_prediction.get('predicted_outcome'),
+                'baseline_outcome': baseline_prediction.get('predicted_outcome'),
+                'improvement': (optimized_prediction.get('predicted_outcome', 0) -
+                              baseline_prediction.get('predicted_outcome', 0)),
+                'optimization_details': {
+                    'function_evaluations': result.nfev,
+                    'final_objective_value': result.fun,
+                    'convergence_message': result.message
+                }
+            }
+
+            return optimization_results
+
+        except Exception as e:
+            return {'error': f'Differential evolution optimization failed: {str(e)}'}
+
+    def multi_objective_optimization(self, base_patient: Dict,
+                                   variable_params: List[str],
+                                   param_ranges: Dict[str, Tuple[float, float]],
+                                   objectives: List[str] = ['efficacy', 'safety']) -> Dict[str, Any]:
+        """
+        Multi-objective optimization using NSGA-II algorithm
+        """
+        if not self.predictor.trained_models:
+            return {'error': 'No trained models available for optimization'}
+
+        # This is a simplified version - in practice, you'd need multiple models
+        # for different objectives (efficacy, safety, cost, etc.)
+
+        def evaluate_objectives(params):
+            # Create patient profile with optimized parameters
+            patient_profile = base_patient.copy()
+
+            for i, param_name in enumerate(variable_params):
+                patient_profile[param_name] = params[i]
+
+            # Predict outcome (assuming this represents efficacy)
+            prediction_result = self.predictor.predict_treatment_outcome(patient_profile)
+
+            if 'error' in prediction_result:
+                return [0.0, 0.0]  # Poor performance for invalid parameters
+
+            efficacy = prediction_result['predicted_outcome']
+
+            # Simplified safety calculation (in practice, use separate safety model)
+            # Higher patient count might reduce safety (more complex to manage)
+            safety = 100 - patient_profile.get('n_patients', 50) * 0.5
+
+            return [efficacy, safety]
+
+        # Run multiple single-objective optimizations to approximate Pareto front
+        pareto_solutions = []
+
+        # Weight combinations for scalarization
+        weights = [
+            [1.0, 0.0],    # Pure efficacy
+            [0.8, 0.2],    # Efficacy-focused
+            [0.6, 0.4],    # Balanced
+            [0.4, 0.6],    # Safety-focused
+            [0.2, 0.8],    # Safety-focused
+            [0.0, 1.0]     # Pure safety
+        ]
+
+        for w_eff, w_safe in weights:
+            def weighted_objective(params):
+                efficacy, safety = evaluate_objectives(params)
+                return -(w_eff * efficacy + w_safe * safety)
+
+            bounds = [param_ranges[param] for param in variable_params]
+
+            try:
+                result = differential_evolution(
+                    weighted_objective,
+                    bounds,
+                    maxiter=50,
+                    popsize=10,
+                    seed=42
+                )
+
+                if result.success:
+                    efficacy, safety = evaluate_objectives(result.x)
+                    optimized_params = dict(zip(variable_params, result.x))
+
+                    pareto_solutions.append({
+                        'parameters': optimized_params,
+                        'efficacy': efficacy,
+                        'safety': safety,
+                        'weights': [w_eff, w_safe]
+                    })
+
+            except Exception:
+                continue
+
+        return {
+            'success': len(pareto_solutions) > 0,
+            'method': 'multi_objective',
+            'pareto_solutions': pareto_solutions,
+            'n_solutions': len(pareto_solutions)
+        }
+
 
 def main():
     """Main function to demonstrate predictive modeling"""
@@ -680,7 +1024,7 @@ def main():
                       f"{prediction_result['prediction_interval'][1]:.2f}]")
 
         # Treatment optimization example
-        print("\n=== TREATMENT OPTIMIZATION ===")
+        print("\n=== ADVANCED TREATMENT OPTIMIZATION ===")
         optimizer = TreatmentOptimizer(predictor)
 
         variable_params = ['follow_up_months', 'n_patients']
@@ -689,23 +1033,71 @@ def main():
             'n_patients': (10, 100)
         }
 
+        # Standard optimization
+        print("\n1. Standard L-BFGS-B Optimization:")
         optimization_result = optimizer.optimize_treatment_protocol(
             example_patient, variable_params, param_ranges
         )
 
         if 'error' not in optimization_result:
-            print(f"Optimization successful: {optimization_result['success']}")
+            print(f"Success: {optimization_result['success']}")
             print(f"Baseline outcome: {optimization_result['baseline_outcome']:.2f}")
             print(f"Optimized outcome: {optimization_result['optimized_outcome']:.2f}")
             print(f"Improvement: {optimization_result['improvement']:.2f}")
-            print("Optimized parameters:")
-            for param, value in optimization_result['optimized_parameters'].items():
-                print(f"  {param}: {value:.2f}")
+
+        # Genetic Algorithm optimization
+        print("\n2. Genetic Algorithm Optimization:")
+        ga_result = optimizer.genetic_algorithm_optimization(
+            example_patient, variable_params, param_ranges
+        )
+
+        if 'error' not in ga_result and ga_result.get('success'):
+            print(f"Best fitness: {ga_result['best_fitness']:.2f}")
+            print(f"Generations: {ga_result['generations']}")
+            print(f"Improvement: {ga_result['improvement']:.2f}")
+
+        # Differential Evolution optimization
+        print("\n3. Differential Evolution Optimization:")
+        de_result = optimizer.differential_evolution_optimization(
+            example_patient, variable_params, param_ranges
+        )
+
+        if 'error' not in de_result and de_result.get('success'):
+            print(f"Function evaluations: {de_result['optimization_details']['function_evaluations']}")
+            print(f"Improvement: {de_result['improvement']:.2f}")
+
+        # Multi-objective optimization
+        print("\n4. Multi-Objective Optimization:")
+        mo_result = optimizer.multi_objective_optimization(
+            example_patient, variable_params, param_ranges
+        )
+
+        if 'error' not in mo_result and mo_result.get('success'):
+            print(f"Pareto solutions found: {mo_result['n_solutions']}")
+            print("Sample solutions:")
+            for i, solution in enumerate(mo_result['pareto_solutions'][:3]):
+                print(f"  Solution {i+1}: Efficacy={solution['efficacy']:.2f}, "
+                      f"Safety={solution['safety']:.2f}")
+
+        # Model ensemble comparison
+        print("\n=== ENSEMBLE MODEL PERFORMANCE ===")
+        if 'model_ranking' in training_results:
+            ensemble_models = [m for m in training_results['model_ranking']
+                             if m['model_name'] in ['voting_regressor', 'bagging', 'stacking']]
+
+            if ensemble_models:
+                print("Ensemble model performance:")
+                for model_info in ensemble_models:
+                    print(f"{model_info['model_name']}: "
+                          f"R² = {model_info['test_r2']:.3f}, "
+                          f"RMSE = {model_info['test_rmse']:.3f}")
 
     else:
         print(f"Training failed: {training_results['error']}")
 
-    print("\nPredictive modeling analysis completed!")
+    print("\n" + "="*50)
+    print("ADVANCED PREDICTIVE MODELING ANALYSIS COMPLETED!")
+    print("="*50)
 
 
 if __name__ == "__main__":
